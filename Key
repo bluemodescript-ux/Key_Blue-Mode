@@ -1,1 +1,231 @@
+-- 🔵 BLUE MODE HUB | Random Math Key System — FIXED & WORKING
+task.wait(0.1)
+
+-- Prevent duplicate loading
+if getgenv().BlueModeKeySys_Loaded then return end
+getgenv().BlueModeKeySys_Loaded = true
+
+local Players = game:GetService("Players")
+local CoreGui = game:GetService("CoreGui")
+local RunService = game:GetService("RunService")
+
+local ActivePopups = {}
+
+-- ✅ Generate random math question
+local function GenerateMathQuestion()
+    local ops = {
+        {sym = "+", calc = function(a,b) return a+b end},
+        {sym = "−", calc = function(a,b) return a-b end},
+        {sym = "×", calc = function(a,b) return a*b end},
+        {sym = "÷", calc = function(a,b) return a/b end}
+    }
+    local op = ops[math.random(#ops)]
+    local a, b, ans
+
+    if op.sym == "+" or op.sym == "−" then
+        a = math.random(-10, 10)
+        b = math.random(-10, 10)
+        ans = op.calc(a, b)
+    elseif op.sym == "×" then
+        a = math.random(-5, 5)
+        b = math.random(-5, 5)
+        ans = op.calc(a, b)
+    else
+        b = math.random(-5, 5)
+        if b == 0 then b = 2 end
+        ans = math.random(-5, 5)
+        a = ans * b
+    end
+
+    ans = tonumber(string.format("%.0f", ans))
+    return a .. " " .. op.sym .. " " .. b .. " = ?", tostring(ans)
+end
+
+local QuestionText, CorrectAnswer = GenerateMathQuestion()
+
+-- ✅ Create GUI container
+local GuiContainer = Instance.new("Folder")
+GuiContainer.Name = "BlueModeKeySys"
+GuiContainer.Parent = CoreGui
+
+-- ✅ Main Key UI — GUARANTEED VISIBLE
+local KeyUI = Instance.new("ScreenGui")
+KeyUI.Name = "BlueModeKeySystem"
+KeyUI.ResetOnSpawn = false
+KeyUI.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+KeyUI.DisplayOrder = 999 -- On top of everything
+KeyUI.Parent = GuiContainer
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 380, 0, 270)
+MainFrame.Position = UDim2.new(0.5, -190, 0.5, -135)
+MainFrame.BackgroundColor3 = Color3.fromRGB(10, 15, 30)
+MainFrame.BorderSizePixel = 2
+MainFrame.BorderColor3 = Color3.fromRGB(0, 180, 255)
+MainFrame.Active = true
+MainFrame.Visible = true
+MainFrame.Parent = KeyUI
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 20)
+
+local Border = Instance.new("UIStroke")
+Border.Thickness = 4
+Border.Color = Color3.fromRGB(0, 80, 255)
+Border.LineJoinMode = Enum.LineJoinMode.Round
+Border.Parent = MainFrame
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, -40, 0, 55)
+Title.Position = UDim2.new(0, 20, 0, 10)
+Title.BackgroundTransparency = 1
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 28
+Title.Text = "🔵 BLUE MODE HUB — KEY"
+Title.TextColor3 = Color3.fromRGB(0, 200, 255)
+Title.Parent = MainFrame
+
+local Question = Instance.new("TextLabel")
+Question.Size = UDim2.new(1, -40, 0, 50)
+Question.Position = UDim2.new(0, 20, 0, 70)
+Question.BackgroundTransparency = 1
+Question.Font = Enum.Font.GothamBold
+Question.TextSize = 26
+Question.Text = QuestionText
+Question.TextColor3 = Color3.fromRGB(255, 255, 255)
+Question.Parent = MainFrame
+
+local AnswerBox = Instance.new("TextBox")
+AnswerBox.Size = UDim2.new(1, -40, 0, 60)
+AnswerBox.Position = UDim2.new(0, 20, 0, 130)
+AnswerBox.BackgroundColor3 = Color3.fromRGB(30, 40, 60)
+AnswerBox.Font = Enum.Font.Gotham
+AnswerBox.TextSize = 24
+AnswerBox.Text = ""
+AnswerBox.PlaceholderText = "👉 Type answer here..."
+AnswerBox.TextColor3 = Color3.new(1, 1, 1)
+AnswerBox.Parent = MainFrame
+Instance.new("UICorner", AnswerBox).CornerRadius = UDim.new(0, 12)
+local BoxGlow = Instance.new("UIStroke")
+BoxGlow.Thickness = 2
+BoxGlow.Color = Color3.fromRGB(0, 180, 255)
+BoxGlow.Parent = AnswerBox
+
+local ConfirmBtn = Instance.new("TextButton")
+ConfirmBtn.Size = UDim2.new(1, -40, 0, 55)
+ConfirmBtn.Position = UDim2.new(0, 20, 0, 200)
+ConfirmBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 230)
+ConfirmBtn.Font = Enum.Font.GothamBold
+ConfirmBtn.TextSize = 24
+ConfirmBtn.Text = "✓ CONFIRM & UNLOCK"
+ConfirmBtn.TextColor3 = Color3.new(1, 1, 1)
+ConfirmBtn.AutoLocalize = false
+ConfirmBtn.Parent = MainFrame
+Instance.new("UICorner", ConfirmBtn).CornerRadius = UDim.new(0, 12)
+local BtnGlow = Instance.new("UIStroke")
+BtnGlow.Thickness = 3
+BtnGlow.Color = Color3.fromRGB(0, 150, 255)
+BtnGlow.Parent = ConfirmBtn
+
+-- Mean messages
+local MeanTexts = {
+    "Math is too hard for you?!",
+    "Wow, TERRIBLE at math!",
+    "Even a kid knows this!",
+    "Math noob detected 🤡",
+    "How do you get that wrong??",
+    "Brain not found — try again",
+    "Math skills = 0",
+    "Did you skip math class?"
+}
+
+-- Clear all popups
+local function ClearAllPopups()
+    for _, Pop in ipairs(ActivePopups) do
+        if Pop then pcall(function() Pop:Destroy() end) end
+    end
+    table.clear(ActivePopups)
+end
+
+-- Spam popups — stays fully on screen
+local function SpamPopups()
+    local MaxPops = 8
+    local w, h = 260, 140
+
+    local function MakeOnePopup()
+        local PopUI = Instance.new("ScreenGui")
+        PopUI.Name = "BlueModePop"
+        PopUI.ResetOnSpawn = false
+        PopUI.DisplayOrder = 999
+        PopUI.Parent = GuiContainer
+        table.insert(ActivePopups, PopUI)
+
+        local x = math.random(20, 1080 - w - 20)
+        local y = math.random(20, 600 - h - 20)
+
+        local PopFrame = Instance.new("Frame")
+        PopFrame.Size = UDim2.new(0, w, 0, h)
+        PopFrame.Position = UDim2.new(0, x, 0, y)
+        PopFrame.BackgroundColor3 = Color3.fromRGB(50, 15, 15)
+        PopFrame.Active = true
+        PopFrame.Parent = PopUI
+        Instance.new("UICorner", PopFrame).CornerRadius = UDim.new(0, 12)
+
+        local PopBorder = Instance.new("UIStroke")
+        PopBorder.Thickness = 3
+        PopBorder.Color = Color3.fromRGB(255, 60, 60)
+        PopBorder.Parent = PopFrame
+
+        local CloseX = Instance.new("TextButton")
+        CloseX.Size = UDim2.new(0, 35, 0, 35)
+        CloseX.Position = UDim2.new(1, -40, 0, 5)
+        CloseX.BackgroundColor3 = Color3.fromRGB(200, 30, 30)
+        CloseX.Font = Enum.Font.GothamBold
+        CloseX.TextSize = 20
+        CloseX.Text = "✕"
+        CloseX.TextColor3 = Color3.new(1, 1, 1)
+        CloseX.Parent = PopFrame
+        Instance.new("UICorner", CloseX).CornerRadius = UDim.new(0, 8)
+
+        local PopText = Instance.new("TextLabel")
+        PopText.Size = UDim2.new(1, -30, 0, 90)
+        PopText.Position = UDim2.new(0, 15, 0, 25)
+        PopText.BackgroundTransparency = 1
+        PopText.Font = Enum.Font.GothamBold
+        PopText.TextSize = 18
+        PopText.Text = MeanTexts[math.random(#MeanTexts)]
+        PopText.TextColor3 = Color3.fromRGB(255, 100, 100)
+        PopText.Parent = PopFrame
+
+        CloseX.MouseButton1Click:Connect(function()
+            pcall(function() PopUI:Destroy() end)
+        end)
+    end
+
+    for i = 1, MaxPops do
+        task.wait(0.08)
+        MakeOnePopup()
+    end
+end
+
+-- ✅ Confirm Button Logic
+ConfirmBtn.MouseButton1Click:Connect(function()
+    local Ans = AnswerBox.Text
+    if Ans == CorrectAnswer then
+        ClearAllPopups()
+        KeyUI:Destroy()
+        task.wait(0.1)
+        -- ✅ Load your hub
+        loadstring(game:HttpGet("https://pastebin.com/raw/mKAfjfEu", true))()
+    else
+        SpamPopups()
+    end
+end)
+
+-- Rainbow glow animation
+local Hue = 0
+RunService.Heartbeat:Connect(function(dt)
+    Hue = (Hue + dt * 0.35) % 1
+    local Col = Color3.fromHSV(Hue, 1, 1)
+    Border.Color = Col
+    BtnGlow.Color = Col
+end)
 
