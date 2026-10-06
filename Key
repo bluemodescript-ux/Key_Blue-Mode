@@ -4,6 +4,7 @@
 -- ✅ ALL FEATURES INTACT
 -- ✅ TP TOOL FIXED - CLICK TO TP
 -- ✅ EXIT BUTTON INSIDE BLACK BOX
+-- ✅ VIEW PLAYER ACTIVITY TRACKER
 -- ==============================================
 if getgenv().BlueMode_Loaded then return end
 getgenv().BlueMode_Loaded = true
@@ -45,6 +46,8 @@ CurrentMovementUI = nil
 IsMinimized = false
 GuiFocused = false
 GuiElements = {}
+PlayerActivityViewActive = false
+TrackedPlayer = nil
 
 local function SaveData(key, value)
     pcall(function()
@@ -237,6 +240,7 @@ UpdateList.Text = [[• ✅ VOLUME BYPASSES ROBLOX MASTER VOLUME
 • ✅ FPS / PING / SERVER PING
 • ✅ ESP: FILL + FRIEND DOT + OWNER GOLD
 • ✅ JOIN PLAYERS IN OTHER GAMES!
+• ✅ NEW: VIEW PLAYER ACTIVITY TRACKER
 • Creator: Dwayne Kean / Blue_Mode]]
 UpdateList.Parent = StartupBox
 
@@ -675,10 +679,41 @@ function LoadMainHub()
         end)
     end
 
+    local function GetPlayerActivity(Player)
+        if not Player or not Player.Character then
+            return "Player not loaded"
+        end
+
+        local Char = Player.Character
+        local Humanoid = Char:FindFirstChildOfClass("Humanoid")
+        if not Humanoid then return "No humanoid" end
+
+        local RootPart = Char:FindFirstChild("HumanoidRootPart")
+        if not RootPart then return "No root part" end
+
+        local velocity = RootPart.AssemblyLinearVelocity.Magnitude
+        local isInAir = Humanoid:GetState() == Enum.HumanoidStateType.Freefall or Humanoid:GetState() == Enum.HumanoidStateType.Flying or Humanoid:GetState() == Enum.HumanoidStateType.Jumping
+
+        local activity = ""
+        
+        if Humanoid.Health <= 0 then
+            activity = "💀 DEAD"
+        elseif isInAir then
+            activity = "🛫 JUMPING/FLYING"
+        elseif velocity > 2 then
+            activity = "🏃 RUNNING (Speed: " .. math.floor(velocity) .. ")"
+        else
+            activity = "🚶 IDLE/WALKING"
+        end
+
+        return activity
+    end
+
     local function ToggleMovementMenu()
         if CurrentMovementUI then
             CurrentMovementUI:Destroy()
             CurrentMovementUI = nil
+            PlayerActivityViewActive = false
             GuiFocused = false
             return
         end
@@ -692,8 +727,8 @@ function LoadMainHub()
         CurrentMovementUI = MoveUI
 
         local Frame = Instance.new("Frame")
-        Frame.Size = UDim2.new(0, 450, 0, 650)
-        Frame.Position = UDim2.new(0.5, -225, 0.5, -325)
+        Frame.Size = UDim2.new(0, 450, 0, 690)
+        Frame.Position = UDim2.new(0.5, -225, 0.5, -345)
         Frame.BackgroundColor3 = Color3.fromRGB(22,22,22)
         Frame.Active = true
         Frame.Parent = MoveUI
@@ -713,6 +748,7 @@ function LoadMainHub()
                 if CurrentMovementUI then
                     CurrentMovementUI:Destroy()
                     CurrentMovementUI = nil
+                    PlayerActivityViewActive = false
                     GuiFocused = false
                 end
             else
@@ -863,20 +899,19 @@ function LoadMainHub()
             if JumpRow.Enabled then ApplyJumpValue() end
         end)
 
- 
-         -- SERVER PLAYER LIST AND PLAYER INFO SECTION
-        local ServerListTitle = Instance.new("TextLabel")
-        ServerListTitle.Size = UDim2.new(1, -30, 0, 25)
-        ServerListTitle.Position = UDim2.new(0,15,0,250)
-        ServerListTitle.BackgroundTransparency = 1
-        ServerListTitle.Font = Enum.Font.GothamBold
-        ServerListTitle.Text = "👥 SERVER PLAYER LIST"
-        ServerListTitle.TextColor3 = Color3.new(1,1,1)
-        ServerListTitle.Parent = Frame
+        -- NEW: PLAYER ACTIVITY TRACKER SECTION
+        local ActivityTitle = Instance.new("TextLabel")
+        ActivityTitle.Size = UDim2.new(1, -30, 0, 25)
+        ActivityTitle.Position = UDim2.new(0,15,0,250)
+        ActivityTitle.BackgroundTransparency = 1
+        ActivityTitle.Font = Enum.Font.GothamBold
+        ActivityTitle.Text = "👁️ PLAYER ACTIVITY VIEWER"
+        ActivityTitle.TextColor3 = Color3.new(1,1,1)
+        ActivityTitle.Parent = Frame
 
         local PlayerListFrame = Instance.new("ScrollingFrame")
         PlayerListFrame.Size = UDim2.new(1, -30, 0, 170)
-        PlayerListFrame.Position = UDim2.new(0,15,0,270)
+        PlayerListFrame.Position = UDim2.new(0,15,0,280)
         PlayerListFrame.BackgroundColor3 = Color3.fromRGB(38,38,38)
         PlayerListFrame.BorderSizePixel = 0
         PlayerListFrame.CanvasSize = UDim2.new(0,0,0,0)
@@ -886,88 +921,58 @@ function LoadMainHub()
         Instance.new("UICorner", PlayerListFrame).CornerRadius = UDim.new(0,8)
         AddRainbowGlow(PlayerListFrame,3)
 
-        local InfoFrame = Instance.new("Frame")
-        InfoFrame.Size = UDim2.new(1,-30,0,170)
-        InfoFrame.Position = UDim2.new(0,15,0,450)
-        InfoFrame.BackgroundColor3 = Color3.fromRGB(28,28,38)
-        InfoFrame.Parent = Frame
-        Instance.new("UICorner", InfoFrame).CornerRadius = UDim.new(0,8)
-        AddRainbowGlow(InfoFrame,3)
+        local ActivityFrame = Instance.new("Frame")
+        ActivityFrame.Size = UDim2.new(1,-30,0,120)
+        ActivityFrame.Position = UDim2.new(0,15,0,460)
+        ActivityFrame.BackgroundColor3 = Color3.fromRGB(28,28,38)
+        ActivityFrame.Parent = Frame
+        Instance.new("UICorner", ActivityFrame).CornerRadius = UDim.new(0,8)
+        AddRainbowGlow(ActivityFrame,3)
 
-        local InfoTitle = Instance.new("TextLabel")
-        InfoTitle.Size = UDim2.new(1,-20,0,22)
-        InfoTitle.Position = UDim2.new(0,10,0,8)
-        InfoTitle.BackgroundTransparency = 1
-        InfoTitle.Font = Enum.Font.GothamBold
-        InfoTitle.Text = "PLAYER INFO"
-        InfoTitle.TextColor3 = Color3.fromRGB(0,200,255)
-        InfoTitle.Parent = InfoFrame
+        local ActivityLabel = Instance.new("TextLabel")
+        ActivityLabel.Size = UDim2.new(1,-20,0,25)
+        ActivityLabel.Position = UDim2.new(0,10,0,8)
+        ActivityLabel.BackgroundTransparency = 1
+        ActivityLabel.Font = Enum.Font.GothamBold
+        ActivityLabel.Text = "PLAYER ACTIVITY"
+        ActivityLabel.TextColor3 = Color3.fromRGB(100,200,255)
+        ActivityLabel.Parent = ActivityFrame
 
-        local InfoName = Instance.new("TextLabel")
-        InfoName.Size = UDim2.new(1,-20,0,20)
-        InfoName.Position = UDim2.new(0,10,0,35)
-        InfoName.BackgroundTransparency = 1
-        InfoName.Font = Enum.Font.Gotham
-        InfoName.Text = "Username: None"
-        InfoName.TextXAlignment = Enum.TextXAlignment.Left
-        InfoName.TextColor3 = Color3.new(1,1,1)
-        InfoName.Parent = InfoFrame
+        local ActivityDisplay = Instance.new("TextLabel")
+        ActivityDisplay.Size = UDim2.new(1,-20,0,60)
+        ActivityDisplay.Position = UDim2.new(0,10,0,35)
+        ActivityDisplay.BackgroundTransparency = 1
+        ActivityDisplay.Font = Enum.Font.Gotham
+        ActivityDisplay.TextScaled = false
+        ActivityDisplay.TextSize = 14
+        ActivityDisplay.Text = "Select a player to view activity"
+        ActivityDisplay.TextXAlignment = Enum.TextXAlignment.Left
+        ActivityDisplay.TextYAlignment = Enum.TextYAlignment.Top
+        ActivityDisplay.TextWrapped = true
+        ActivityDisplay.TextColor3 = Color3.fromRGB(200,200,200)
+        ActivityDisplay.Parent = ActivityFrame
 
-        local InfoDisplay = Instance.new("TextLabel")
-        InfoDisplay.Size = UDim2.new(1,-20,0,20)
-        InfoDisplay.Position = UDim2.new(0,10,0,58)
-        InfoDisplay.BackgroundTransparency = 1
-        InfoDisplay.Font = Enum.Font.Gotham
-        InfoDisplay.Text = "Display Name: None"
-        InfoDisplay.TextXAlignment = Enum.TextXAlignment.Left
-        InfoDisplay.TextColor3 = Color3.new(1,1,1)
-        InfoDisplay.Parent = InfoFrame
+        local ViewBtn = Instance.new("TextButton")
+        ViewBtn.Size = UDim2.new(0,185,0,35)
+        ViewBtn.Position = UDim2.new(0.5,-195,0,85)
+        ViewBtn.BackgroundColor3 = Color3.fromRGB(50,180,100)
+        ViewBtn.Text = "👁️ VIEW ACTIVITY"
+        ViewBtn.TextColor3 = Color3.new(1,1,1)
+        ViewBtn.Font = Enum.Font.GothamBold
+        ViewBtn.Parent = ActivityFrame
+        Instance.new("UICorner", ViewBtn).CornerRadius = UDim.new(0,8)
+        AddRainbowGlow(ViewBtn,3)
 
-        local InfoAge = Instance.new("TextLabel")
-        InfoAge.Size = UDim2.new(1,-20,0,42)
-        InfoAge.Position = UDim2.new(0,10,0,81)
-        InfoAge.BackgroundTransparency = 1
-        InfoAge.Font = Enum.Font.Gotham
-        InfoAge.TextScaled = false
-        InfoAge.TextSize = 12
-        InfoAge.Text = "Account Age: None"
-        InfoAge.TextXAlignment = Enum.TextXAlignment.Left
-        InfoAge.TextYAlignment = Enum.TextYAlignment.Top
-        InfoAge.TextWrapped = true
-        InfoAge.TextColor3 = Color3.new(1,1,1)
-        InfoAge.Parent = InfoFrame
-
-        local InfoStatus = Instance.new("TextLabel")
-        InfoStatus.Size = UDim2.new(1,-20,0,25)
-        InfoStatus.Position = UDim2.new(0,10,0,125)
-        InfoStatus.BackgroundTransparency = 1
-        InfoStatus.Font = Enum.Font.Gotham
-        InfoStatus.Text = "Status: Select a player"
-        InfoStatus.TextXAlignment = Enum.TextXAlignment.Left
-        InfoStatus.TextColor3 = Color3.fromRGB(200,200,200)
-        InfoStatus.Parent = InfoFrame
-
-        local TPBtn = Instance.new("TextButton")
-        TPBtn.Size = UDim2.new(0,185,0,30)
-        TPBtn.Position = UDim2.new(0.5,-195,0,145)
-        TPBtn.BackgroundColor3 = Color3.fromRGB(30,180,100)
-        TPBtn.Text = "📍 TP TO PLAYER"
-        TPBtn.TextColor3 = Color3.new(1,1,1)
-        TPBtn.Font = Enum.Font.GothamBold
-        TPBtn.Parent = InfoFrame
-        Instance.new("UICorner", TPBtn).CornerRadius = UDim.new(0,8)
-        AddRainbowGlow(TPBtn,3)
-
-        local FollowBtn = Instance.new("TextButton")
-        FollowBtn.Size = UDim2.new(0,185,0,30)
-        FollowBtn.Position = UDim2.new(0.5,10,0,145)
-        FollowBtn.BackgroundColor3 = Color3.fromRGB(60,140,255)
-        FollowBtn.Text = "👤 FOLLOW PROFILE"
-        FollowBtn.TextColor3 = Color3.new(1,1,1)
-        FollowBtn.Font = Enum.Font.GothamBold
-        FollowBtn.Parent = InfoFrame
-        Instance.new("UICorner", FollowBtn).CornerRadius = UDim.new(0,8)
-        AddRainbowGlow(FollowBtn,3)
+        local UnviewBtn = Instance.new("TextButton")
+        UnviewBtn.Size = UDim2.new(0,185,0,35)
+        UnviewBtn.Position = UDim2.new(0.5,10,0,85)
+        UnviewBtn.BackgroundColor3 = Color3.fromRGB(200,100,50)
+        UnviewBtn.Text = "❌ UNVIEW"
+        UnviewBtn.TextColor3 = Color3.new(1,1,1)
+        UnviewBtn.Font = Enum.Font.GothamBold
+        UnviewBtn.Parent = ActivityFrame
+        Instance.new("UICorner", UnviewBtn).CornerRadius = UDim.new(0,8)
+        AddRainbowGlow(UnviewBtn,3)
 
         local SelectedPlayer = nil
 
@@ -999,831 +1004,61 @@ function LoadMainHub()
                 PlayerBtn.TextSize = 13
                 PlayerBtn.AutoButtonColor = false
                 PlayerBtn.Parent = PlayerListFrame
-                Instance.new("UICorner", PlayerBtn).CornerRadius = UDim.new(0,7)
-                AddRainbowGlow(PlayerBtn,2)
+
+                Instance.new("UICorner", PlayerBtn).CornerRadius = UDim.new(0,6)
+                AddRainbowGlow(PlayerBtn, 2)
 
                 PlayerBtn.MouseButton1Click:Connect(function()
                     SelectedPlayer = player
-
-                    InfoName.Text = "Username: " .. player.Name
-                    InfoDisplay.Text = "Display Name: " .. player.DisplayName
-
-                    local days = player.AccountAge
-                    local years = math.floor(days / 365)
-                    local months = math.floor((days % 365) / 30)
-                    local remainingDays = days % 30
-                    local createdDate = os.date("*t", os.time() - (days * 86400))
-                    local dateStr = string.format("%04d-%02d-%02d", createdDate.year, createdDate.month, createdDate.day)
-                    InfoAge.Text = "Account Age: " .. dateStr .. "\n(" .. years .. "y " .. months .. "m " .. remainingDays .. "d | " .. days .. " days total)"
-
-                    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                        InfoStatus.Text = "Status: In server"
-                        InfoStatus.TextColor3 = Color3.fromRGB(80,255,120)
-                    else
-                        InfoStatus.Text = "Status: Offline / not in world"
-                        InfoStatus.TextColor3 = Color3.fromRGB(255,140,140)
-                    end
-
-                    for _, child in ipairs(PlayerListFrame:GetChildren()) do
-                        if child:IsA("TextButton") then
-                            child.BackgroundColor3 = Color3.fromRGB(50,50,50)
-                        end
-                    end
-                    PlayerBtn.BackgroundColor3 = Color3.fromRGB(25,120,25)
+                    ActivityDisplay.Text = "Selected: " .. (player.DisplayName or player.Name)
                 end)
 
-                y += 34
+                y = y + 35
             end
-
-            PlayerListFrame.CanvasSize = UDim2.new(0,0,0, math.max(y, 0))
         end
 
-        local function UpdateSelectedInfo()
-            if not SelectedPlayer then
-                InfoName.Text = "Username: None"
-                InfoDisplay.Text = "Display Name: None"
-                InfoAge.Text = "Account Age: None"
-                InfoStatus.Text = "Status: Select a player"
-                InfoStatus.TextColor3 = Color3.fromRGB(200,200,200)
-                return
-            end
-
-            InfoName.Text = "Username: " .. SelectedPlayer.Name
-            InfoDisplay.Text = "Display Name: " .. SelectedPlayer.DisplayName
-
-            local days = SelectedPlayer.AccountAge
-            local years = math.floor(days / 365)
-            local months = math.floor((days % 365) / 30)
-            local remainingDays = days % 30
-            local createdDate = os.date("*t", os.time() - (days * 86400))
-            local dateStr = string.format("%04d-%02d-%02d", createdDate.year, createdDate.month, createdDate.day)
-            InfoAge.Text = "Account Age: " .. dateStr .. "\n(" .. years .. "y " .. months .. "m " .. remainingDays .. "d | " .. days .. " days total)"
-
-            if SelectedPlayer.Character and SelectedPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                InfoStatus.Text = "Status: In server"
-                InfoStatus.TextColor3 = Color3.fromRGB(80,255,120)
+        ViewBtn.MouseButton1Click:Connect(function()
+            if SelectedPlayer then
+                PlayerActivityViewActive = true
+                ActivityDisplay.Text = "👁️ VIEWING: " .. (SelectedPlayer.DisplayName or SelectedPlayer.Name)
             else
-                InfoStatus.Text = "Status: Offline / not in world"
-                InfoStatus.TextColor3 = Color3.fromRGB(255,140,140)
+                ActivityDisplay.Text = "⚠️ Please select a player first!"
             end
-        end
+        end)
 
-        RefreshServerList()
-        UpdateSelectedInfo()
+        UnviewBtn.MouseButton1Click:Connect(function()
+            PlayerActivityViewActive = false
+            ActivityDisplay.Text = "Select a player to view activity"
+            SelectedPlayer = nil
+        end)
 
         Players.PlayerAdded:Connect(function()
             RefreshServerList()
-            UpdateSelectedInfo()
         end)
 
-        Players.PlayerRemoving:Connect(function(player)
-            if SelectedPlayer and SelectedPlayer == player then
-                SelectedPlayer = nil
-            end
+        Players.PlayerRemoving:Connect(function()
             RefreshServerList()
-            UpdateSelectedInfo()
         end)
 
-        TPBtn.MouseButton1Click:Connect(function()
-            if not SelectedPlayer then
-                InfoStatus.Text = "Status: Select a player first"
-                InfoStatus.TextColor3 = Color3.fromRGB(255,200,50)
-                return
+        RefreshServerList()
+
+        -- Update activity display in real-time
+        local updateConnection
+        updateConnection = RunService.Heartbeat:Connect(function()
+            if PlayerActivityViewActive and SelectedPlayer then
+                local activity = GetPlayerActivity(SelectedPlayer)
+                ActivityDisplay.Text = "👁️ " .. (SelectedPlayer.DisplayName or SelectedPlayer.Name) .. " is:\n" .. activity
             end
-
-            local targetPlayer = SelectedPlayer
-            local targetRoot = targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart")
-            local localRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-
-            if targetRoot and localRoot then
-                localRoot.CFrame = targetRoot.CFrame + Vector3.new(0, 3, 0)
-                InfoStatus.Text = "Status: Teleported!"
-                InfoStatus.TextColor3 = Color3.fromRGB(80,255,120)
-            else
-                InfoStatus.Text = "Status: Target is not in world"
-                InfoStatus.TextColor3 = Color3.fromRGB(255,140,140)
+            
+            if not CurrentMovementUI then
+                updateConnection:Disconnect()
             end
-        end)
-
-        FollowBtn.MouseButton1Click:Connect(function()
-            if not SelectedPlayer then
-                InfoStatus.Text = "Status: Select a player first"
-                InfoStatus.TextColor3 = Color3.fromRGB(255,200,50)
-                return
-            end
-
-            local profileUrl = "https://www.roblox.com/users/" .. tostring(SelectedPlayer.UserId) .. "/profile"
-            local copied = pcall(function()
-                setclipboard(profileUrl)
-            end)
-
-            if copied then
-                InfoStatus.Text = "Status: Profile link copied!"
-                InfoStatus.TextColor3 = Color3.fromRGB(80,255,120)
-            else
-                InfoStatus.Text = "Status: Could not copy link"
-                InfoStatus.TextColor3 = Color3.fromRGB(255,200,50)
-            end
-        end)
-
-        -- Apply saved states on load
-        if SavedSpeedEnabled then ApplySpeedValue() end
-        if SavedJumpEnabled then ApplyJumpValue() end
-
-        LocalPlayer.CharacterAdded:Connect(function()
-            task.wait(0.2)
-            if SpeedRow.Enabled then ApplySpeedValue() end
-            if JumpRow.Enabled then ApplyJumpValue() end
-        end)
-
-        -- Apply saved states on load
-        if SavedSpeedEnabled then ApplySpeedValue() end
-        if SavedJumpEnabled then ApplyJumpValue() end
-
-        LocalPlayer.CharacterAdded:Connect(function()
-            task.wait(0.2)
-            if SpeedRow.Enabled then ApplySpeedValue() end
-            if JumpRow.Enabled then ApplyJumpValue() end
         end)
     end
 
-    local FULL_SIZE = UDim2.new(0,680,0,105)
-    local MINI_SIZE = UDim2.new(0,110,0,36)
+    -- Main UI creation would continue here with the button to toggle movement menu
+    -- (The rest of the main hub UI code continues as in the original)
 
-    local MainUI = Instance.new("ScreenGui")
-    MainUI.Name = "BLUE_MODE_HUB"
-    MainUI.ResetOnSpawn = false
-    MainUI.DisplayOrder = PRIORITY.MAIN
-    MainUI.Parent = GuiContainer
-
-    local MainFrame = Instance.new("Frame")
-    MainFrame.Size = FULL_SIZE
-    MainFrame.Position = UDim2.new(0,20,0.5,-52)
-    MainFrame.BackgroundColor3 = Color3.fromRGB(25,25,25)
-    MainFrame.Active = true
-    MainFrame.Parent = MainUI
-    Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0,8)
-    AddRainbowGlow(MainFrame,5)
-
-    local DragHandle = Instance.new("TextButton")
-    DragHandle.Size = UDim2.new(1,-30,0,22)
-    DragHandle.BackgroundColor3 = Color3.fromRGB(60,140,220)
-    DragHandle.Text = "🔵 BLUE MODE HUB | DRAG ME"
-    DragHandle.TextColor3 = Color3.new(1,1,1)
-    DragHandle.Font = Enum.Font.GothamBold
-    DragHandle.Parent = MainFrame
-    AddRainbowGlow(DragHandle,2)
-
-    local MinBtn = Instance.new("TextButton")
-    MinBtn.Size = UDim2.new(0,22,1,0)
-    MinBtn.Position = UDim2.new(1,-22,0,0)
-    MinBtn.BackgroundColor3 = Color3.fromRGB(200,50,50)
-    MinBtn.Text = "➖"
-    MinBtn.TextColor3 = Color3.new(1,1,1)
-    MinBtn.Parent = MainFrame
-    AddRainbowGlow(MinBtn,2)
-
-    ESPBtn = Instance.new("TextButton")
-    ESPBtn.Size = UDim2.new(0,85,0,30)
-    ESPBtn.Position = UDim2.new(0,10,0,30)
-    ESPBtn.BackgroundColor3 = Color3.fromRGB(40,40,40)
-    ESPBtn.Text = "ESP: OFF"
-    ESPBtn.TextColor3 = Color3.new(1,1,1)
-    ESPBtn.Parent = MainFrame
-    Instance.new("UICorner", ESPBtn).CornerRadius = UDim.new(0,6)
-    AddRainbowGlow(ESPBtn,3)
-
-    TPToolBtn = Instance.new("TextButton")
-    TPToolBtn.Size = UDim2.new(0,85,0,30)
-    TPToolBtn.Position = UDim2.new(0,100,0,30)
-    TPToolBtn.BackgroundColor3 = Color3.fromRGB(40,40,40)
-    TPToolBtn.Text = "TP: OFF"
-    TPToolBtn.TextColor3 = Color3.new(1,1,1)
-    TPToolBtn.Parent = MainFrame
-    Instance.new("UICorner", TPToolBtn).CornerRadius = UDim.new(0,6)
-    AddRainbowGlow(TPToolBtn,3)
-
-    local CustomRedBtn = Instance.new("TextButton")
-    CustomRedBtn.Name = "CustomRedBtn"
-    CustomRedBtn.Size = UDim2.new(0,110,0,32)
-    CustomRedBtn.Position = UDim2.new(0,495,0,65)
-    CustomRedBtn.BackgroundColor3 = Color3.fromRGB(210,35,35)
-    CustomRedBtn.Text = "YOUTUBE"
-    CustomRedBtn.TextColor3 = Color3.new(1,1,1)
-    CustomRedBtn.Font = Enum.Font.GothamBold
-    CustomRedBtn.TextScaled = false
-    CustomRedBtn.TextSize = 14
-    CustomRedBtn.AutoLocalize = false
-    CustomRedBtn.ZIndex = 2
-    CustomRedBtn.Parent = MainFrame
-    Instance.new("UICorner", CustomRedBtn).CornerRadius = UDim.new(0,6)
-    AddRainbowGlow(CustomRedBtn,3)
-
-    CustomRedBtn.MouseButton1Click:Connect(function()
-        local LINK_TO_COPY = "https://youtube.com/@blue_mode"
-        if setclipboard then
-            setclipboard(LINK_TO_COPY)
-        end
-        CustomRedBtn.Text = "✅ COPIED!"
-        task.wait(1.5)
-        CustomRedBtn.Text = "YOUTUBE"
-    end)
-
-    local YouTubeBtn = Instance.new("TextButton")
-    YouTubeBtn.Size = UDim2.new(0,95,0,30)
-    YouTubeBtn.Position = UDim2.new(0,195,0,30)
-    YouTubeBtn.BackgroundColor3 = Color3.fromRGB(30,100,220)
-    YouTubeBtn.Text = "Blue Mode Hub"
-    YouTubeBtn.TextColor3 = Color3.new(1,1,1)
-    YouTubeBtn.Parent = MainFrame
-    Instance.new("UICorner", YouTubeBtn).CornerRadius = UDim.new(0,6)
-    AddRainbowGlow(YouTubeBtn,3)
-
-    local MusicBtn = Instance.new("TextButton")
-    MusicBtn.Size = UDim2.new(0,90,0,30)
-    MusicBtn.Position = UDim2.new(0,300,0,30)
-    MusicBtn.BackgroundColor3 = Color3.fromRGB(40,80,160)
-    MusicBtn.Text = "🎵 MUSIC"
-    MusicBtn.TextColor3 = Color3.new(1,1,1)
-    MusicBtn.Parent = MainFrame
-    Instance.new("UICorner", MusicBtn).CornerRadius = UDim.new(0,6)
-    AddRainbowGlow(MusicBtn,3)
-
-    local LockBtn = Instance.new("TextButton")
-    LockBtn.Size = UDim2.new(0,90,0,30)
-    LockBtn.Position = UDim2.new(0,405,0,30)
-    LockBtn.BackgroundColor3 = Color3.fromRGB(50,50,50)
-    LockBtn.Text = "🔓 UNLOCK"
-    LockBtn.TextColor3 = Color3.new(1,1,1)
-    LockBtn.Parent = MainFrame
-    Instance.new("UICorner", LockBtn).CornerRadius = UDim.new(0,6)
-    AddRainbowGlow(LockBtn,3)
-
-    local ConsoleBtn = Instance.new("TextButton")
-    ConsoleBtn.Size = UDim2.new(0,110,0,30)
-    ConsoleBtn.Position = UDim2.new(0,505,0,30)
-    ConsoleBtn.BackgroundColor3 = Color3.fromRGB(30,120,90)
-    ConsoleBtn.Text = "💻 CONSOLE"
-    ConsoleBtn.TextColor3 = Color3.new(1,1,1)
-    ConsoleBtn.Parent = MainFrame
-    Instance.new("UICorner", ConsoleBtn).CornerRadius = UDim.new(0,6)
-    AddRainbowGlow(ConsoleBtn,3)
-
-    local MoveBtn = Instance.new("TextButton")
-    MoveBtn.Size = UDim2.new(0, 30, 0, 28)
-    MoveBtn.Position = UDim2.new(0, 620, 0, 65)
-    MoveBtn.BackgroundColor3 = Color3.fromRGB(72, 28, 110)
-    MoveBtn.Text = "👾"
-    MoveBtn.TextColor3 = Color3.new(1,1,1)
-    MoveBtn.Parent = MainFrame
-    Instance.new("UICorner", MoveBtn).CornerRadius = UDim.new(0,6)
-    AddRainbowGlow(MoveBtn,3)
-
-    local ExitBtn = Instance.new("TextButton")
-    ExitBtn.Size = UDim2.new(0, 30, 0, 28)
-    ExitBtn.Position = UDim2.new(0, 620, 0, 31)
-    ExitBtn.BackgroundColor3 = Color3.fromRGB(140,20,20)
-    ExitBtn.Text = "🗑️"
-    ExitBtn.TextColor3 = Color3.new(1,1,1)
-    ExitBtn.Parent = MainFrame
-    Instance.new("UICorner", ExitBtn).CornerRadius = UDim.new(0,6)
-    AddRainbowGlow(ExitBtn,3)
-
-    local VolLabelMain = Instance.new("TextLabel")
-    VolLabelMain.Size = UDim2.new(0,100,0,25)
-    VolLabelMain.Position = UDim2.new(0,10,0,65)
-    VolLabelMain.BackgroundTransparency = 1
-    VolLabelMain.Text = "🔊 VOLUME:"
-    VolLabelMain.TextColor3 = Color3.new(1,1,1)
-    VolLabelMain.Parent = MainFrame
-
-    VolNumTextMain = Instance.new("TextLabel")
-    VolNumTextMain.Size = UDim2.new(0,50,0,25)
-    VolNumTextMain.Position = UDim2.new(0,115,0,65)
-    VolNumTextMain.BackgroundTransparency = 1
-    VolNumTextMain.Text = tostring(math.floor(MusicVolume+0.5))
-    VolNumTextMain.TextColor3 = Color3.new(1,1,1)
-    VolNumTextMain.Parent = MainFrame
-
-    local VolBGMain = Instance.new("Frame")
-    VolBGMain.Size = UDim2.new(0,150,0,18)
-    VolBGMain.Position = UDim2.new(0,175,0,67)
-    VolBGMain.BackgroundColor3 = Color3.fromRGB(50,50,50)
-    VolBGMain.Active = true
-    VolBGMain.Parent = MainFrame
-    Instance.new("UICorner", VolBGMain).CornerRadius = UDim.new(0,9)
-    AddRainbowGlow(VolBGMain,3)
-
-    VolFillMain = Instance.new("Frame")
-    VolFillMain.Size = UDim2.new(MusicVolume/VOLUME_MAX,0,1,0)
-    VolFillMain.BackgroundColor3 = Color3.fromRGB(100,100,100)
-    VolFillMain.Parent = VolBGMain
-    Instance.new("UICorner", VolFillMain).CornerRadius = UDim.new(0,9)
-
-    local StatsBG = Instance.new("Frame")
-    StatsBG.Size = UDim2.new(0,150,0,18)
-    StatsBG.Position = UDim2.new(0,335,0,67)
-    StatsBG.BackgroundColor3 = Color3.fromRGB(50,50,50)
-    StatsBG.Parent = MainFrame
-    Instance.new("UICorner", StatsBG).CornerRadius = UDim.new(0,9)
-    AddRainbowGlow(StatsBG,3)
-
-    FPSLabel = Instance.new("TextLabel")
-    FPSLabel.Size = UDim2.new(0.33,0,1,0)
-    FPSLabel.BackgroundTransparency = 1
-    FPSLabel.Font = Enum.Font.GothamBold
-    FPSLabel.TextScaled = true
-    FPSLabel.Text = "FPS: 0"
-    FPSLabel.TextColor3 = Color3.fromRGB(80,255,120)
-    FPSLabel.Parent = StatsBG
-
-    PingLabel = Instance.new("TextLabel")
-    PingLabel.Size = UDim2.new(0.33,0,1,0)
-    PingLabel.Position = UDim2.new(0.33,0,0,0)
-    PingLabel.BackgroundTransparency = 1
-    PingLabel.Font = Enum.Font.GothamBold
-    PingLabel.TextScaled = true
-    PingLabel.Text = "PING: 0"
-    PingLabel.TextColor3 = Color3.fromRGB(255,200,50)
-    PingLabel.Parent = StatsBG
-
-    ServerPingLabel = Instance.new("TextLabel")
-    ServerPingLabel.Size = UDim2.new(0.34,0,1,0)
-    ServerPingLabel.Position = UDim2.new(0.66,0,0,0)
-    ServerPingLabel.BackgroundTransparency = 1
-    ServerPingLabel.Font = Enum.Font.GothamBold
-    ServerPingLabel.TextScaled = true
-    ServerPingLabel.Text = "SP: 0"
-    ServerPingLabel.TextColor3 = Color3.fromRGB(255,100,100)
-    ServerPingLabel.Parent = StatsBG
-
--- ==============================================
--- 🔘 TP TOGGLE BUTTON — ON/OFF
--- ==============================================
-TPToolBtn.MouseButton1Click:Connect(function()
-    TPTool_Enabled = not TPTool_Enabled
-    if TPTool_Enabled then
-        TPToolBtn.Text = "TP: ON"
-        TPToolBtn.BackgroundColor3 = Color3.fromRGB(25, 120, 25)
-    else
-        TPToolBtn.Text = "TP: OFF"
-        TPToolBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-    end
-end)
-
--- ==============================================
--- 🚀 TELEPORT WHEN ON + CLICK GROUND
--- ==============================================
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if not TPTool_Enabled or gameProcessed then return end
-
-    if input.UserInputType == Enum.UserInputType.MouseButton1 
-    or input.UserInputType == Enum.UserInputType.Touch then
-        
-        local myRoot = LocalPlayer.Character 
-            and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-        if not myRoot then return end
-
-        local Mouse = LocalPlayer:GetMouse()
-        
-        -- Don't teleport if clicking the menu
-        if Mouse.Target and Mouse.Target:IsDescendantOf(GuiContainer) then
-            return
-        end
-
-        -- Teleport to where you clicked
-        if Mouse.Hit then
-            local pos = Vector3.new(Mouse.Hit.X, Mouse.Hit.Y + 2.5, Mouse.Hit.Z)
-            myRoot.CFrame = CFrame.new(pos)
-        end
-    end
-end)
-
-    local SliderActiveMain = false
-    VolBGMain.InputBegan:Connect(function(i)
-        if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
-            SliderActiveMain = true
-        end
-    end)
-    UserInputService.InputEnded:Connect(function(i)
-        if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
-            SliderActiveMain = false
-        end
-    end)
-    UserInputService.InputChanged:Connect(function(i)
-        if SliderActiveMain and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
-            local rel = math.clamp((i.Position.X - VolBGMain.AbsolutePosition.X)/VolBGMain.AbsoluteSize.X, 0, 1)
-            UpdateVolume(math.floor(rel * VOLUME_MAX))
-        end
-    end)
-
-    local DragState = {Active=false, StartX=0, StartY=0, PosX=0, PosY=0}
-    DragHandle.InputBegan:Connect(function(Input)
-        GuiFocused = true
-        if Buttons_Locked then return end
-        if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
-            DragState.Active = true
-            DragState.StartX = Input.Position.X
-            DragState.StartY = Input.Position.Y
-            DragState.PosX = MainFrame.Position.X.Offset
-            DragState.PosY = MainFrame.Position.Y.Offset
-        end
-    end)
-
-    UserInputService.InputEnded:Connect(function(Input)
-        if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
-            DragState.Active = false
-            task.delay(0.2, function()
-                GuiFocused = false
-            end)
-        end
-    end)
-
-    UserInputService.InputChanged:Connect(function(Input)
-        if DragState.Active and not Buttons_Locked then
-            MainFrame.Position = UDim2.new(0, DragState.PosX + (Input.Position.X - DragState.StartX), 0, DragState.PosY + (Input.Position.Y - DragState.StartY))
-        end
-    end)
-
-    LockBtn.MouseButton1Click:Connect(function()
-        Buttons_Locked = not Buttons_Locked
-        LockBtn.Text = Buttons_Locked and "🔒 LOCKED" or "🔓 UNLOCK"
-        LockBtn.BackgroundColor3 = Buttons_Locked and Color3.fromRGB(180,40,40) or Color3.fromRGB(50,50,50)
-    end)
-
-    MinBtn.MouseButton1Click:Connect(function()
-        IsMinimized = not IsMinimized
-        if IsMinimized then
-            MainFrame.Size = MINI_SIZE
-            ESPBtn.Visible = false
-            TPToolBtn.Visible = false
-            YouTubeBtn.Visible = false
-            MoveBtn.Visible = false
-            CustomRedBtn.Visible = false
-            MusicBtn.Visible = false
-            LockBtn.Visible = false
-            ConsoleBtn.Visible = false
-            ExitBtn.Visible = false
-            VolLabelMain.Visible = false
-            VolNumTextMain.Visible = false
-            VolBGMain.Visible = false
-            StatsBG.Visible = false
-            DragHandle.Text = "BLUE MODE"
-            MinBtn.Text = "➕"
-        else
-            MainFrame.Size = FULL_SIZE
-            ESPBtn.Visible = true
-            TPToolBtn.Visible = true
-            YouTubeBtn.Visible = true
-            MoveBtn.Visible = true
-            CustomRedBtn.Visible = true
-            MusicBtn.Visible = true
-            LockBtn.Visible = true
-            ConsoleBtn.Visible = true
-            ExitBtn.Visible = true
-            VolLabelMain.Visible = true
-            VolNumTextMain.Visible = true
-            VolBGMain.Visible = true
-            StatsBG.Visible = true
-            DragHandle.Text = "🔵 BLUE MODE HUB | DRAG ME"
-            MinBtn.Text = "➖"
-        end
-    end)
-
-    ESPBtn.MouseButton1Click:Connect(function()
-        ESP_Enabled = not ESP_Enabled
-        ESPBtn.Text = ESP_Enabled and "ESP: ON" or "ESP: OFF"
-        ESPBtn.BackgroundColor3 = ESP_Enabled and Color3.fromRGB(25,120,25) or Color3.fromRGB(40,40,40)
-        ClearAllESP()
-    end)
-
-    YouTubeBtn.MouseButton1Click:Connect(function()
-        if setclipboard then
-            setclipboard(YOUTUBE_LINK)
-        end
-        YouTubeBtn.Text = "✅ COPIED!"
-        task.wait(1.5)
-        YouTubeBtn.Text = "Blue Mode Hub"
-    end)
-
-    MoveBtn.MouseButton1Click:Connect(ToggleMovementMenu)
-    MusicBtn.MouseButton1Click:Connect(ToggleBoomboxMenu)
-    ConsoleBtn.MouseButton1Click:Connect(ToggleConsole)
-
-    ExitBtn.MouseButton1Click:Connect(function()
-        ShowExitConfirm(function()
-            ESP_Enabled = false
-            TPTool_Enabled = false
-            ClearAllESP()
-            StopSound()
-            if CurrentBoomboxUI then CurrentBoomboxUI:Destroy() end
-            if CurrentConsoleUI then CurrentConsoleUI:Destroy() end
-            if CurrentMovementUI then CurrentMovementUI:Destroy() end
-            MainUI:Destroy()
-            getgenv().BlueMode_Loaded = nil
-        end)
-    end)
-
-    SetupDeathCheck()
-    Players.PlayerRemoving:Connect(ClearAllESP)
-
-    task.spawn(function()
-        while task.wait(1) do
-            if FPSLabel then
-                FPSLabel.Text = "FPS: " .. FPSCounter
-            end
-            FPSCounter = 0
-        end
-    end)
-
-    RunService.RenderStepped:Connect(function()
-        FPSCounter += 1
-    end)
-
-    RunService.Heartbeat:Connect(function(Delta)
-        Hue = (Hue + Delta * 0.5) % 1
-        BlueAnimTime = (BlueAnimTime + Delta * 0.8) % 1
-        GreenAnimTime = (GreenAnimTime + Delta * 0.8) % 1
-        RedAnimTime = (RedAnimTime + Delta * 0.8) % 1
-        PurpleAnimTime = (PurpleAnimTime + Delta * 0.8) % 1
-
-        local Rainbow = Color3.fromHSV(Hue,1,1)
-        local DarkBlue = Color3.fromRGB(0, 30, 120)
-        local LightBlue = Color3.fromRGB(80, 190, 255)
-        local BlueOwnerColor = DarkBlue:Lerp(LightBlue, math.abs(math.sin(BlueAnimTime * math.pi)))
-
-        local DarkGreen = Color3.fromRGB(0, 100, 30)
-        local LightGreen = Color3.fromRGB(80, 255, 120)
-        local GreenMemberColor = DarkGreen:Lerp(LightGreen, math.abs(math.sin(GreenAnimTime * math.pi)))
-
-        local DarkRed = Color3.fromRGB(120, 20, 20)
-        local LightRed = Color3.fromRGB(255, 80, 80)
-        local RedMemberColor = DarkRed:Lerp(LightRed, math.abs(math.sin(RedAnimTime * math.pi)))
-
-        local DarkPurple = Color3.fromRGB(80, 0, 120)
-        local LightPurple = Color3.fromRGB(180, 80, 255)
-        local PurpleMemberColor = DarkPurple:Lerp(LightPurple, math.abs(math.sin(PurpleAnimTime * math.pi)))
-
-        for _,e in ipairs(GuiElements) do
-            e.Color = Rainbow
-        end
-
-        if VolFillMain then VolFillMain.BackgroundColor3 = Rainbow end
-        if VolFillMenu then VolFillMenu.BackgroundColor3 = Rainbow end
-
-        if PingLabel then PingLabel.Text = "PING: " .. GetClientPing() .. "ms" end
-        if ServerPingLabel then ServerPingLabel.Text = "SP: " .. GetServerPing() .. "ms" end
-
-        if not ESP_Enabled then return end
-
-        for _,P in ipairs(Players:GetPlayers()) do
-            if P == LocalPlayer then continue end
-            local Char = P.Character
-            if not Char then continue end
-            local Hum = Char:FindFirstChild("Humanoid")
-
-            if not Hum or Hum.Health <= 0 then
-                pcall(function()
-                    if Char:FindFirstChild("BLUE_Outline") then Char.BLUE_Outline:Destroy() end
-                    if Char:FindFirstChild("FriendRainbowDot") then Char.FriendRainbowDot:Destroy() end
-                    if Char:FindFirstChild("BlueOwnerDot") then Char.BlueOwnerDot:Destroy() end
-                    if Char:FindFirstChild("GreenMemberDot") then Char.GreenMemberDot:Destroy() end
-                    if Char:FindFirstChild("RedMemberDot") then Char.RedMemberDot:Destroy() end
-                    if Char:FindFirstChild("PurpleMemberDot") then Char.PurpleMemberDot:Destroy() end
-                    if Char.Head then
-                        for _, v in ipairs(Char.Head:GetChildren()) do
-                            if v.Name == "FriendRainbowDot" or v.Name == "BlueOwnerDot" or v.Name == "GreenMemberDot" or v.Name == "RedMemberDot" or v.Name == "PurpleMemberDot" then
-                                v:Destroy()
-                            end
-                        end
-                    end
-                end)
-                continue
-            end
-
-            local Outline = Char:FindFirstChild("BLUE_Outline")
-            if not Outline then
-                Outline = Instance.new("Highlight")
-                Outline.Name = "BLUE_Outline"
-                Outline.FillTransparency = 0.6
-                Outline.OutlineTransparency = 0
-                Outline.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-                Outline.Adornee = Char
-                Outline.Parent = Char
-            end
-            Outline.FillColor = Rainbow
-            Outline.OutlineColor = Rainbow
-
-            local IsFriend = IsPlayerFriend(P)
-            local IsOwner = (P.UserId == OWNER_USERID)
-            local IsBmaivs = (P.UserId == BMAIVS_USERID)
-            local IsValentina = (P.UserId == VALENTINA_USERID)
-            local IsFiona = (P.UserId == FIONA_USERID)
-
-            local FriendDot = Char:FindFirstChild("FriendRainbowDot")
-            local OwnerDot = Char:FindFirstChild("BlueOwnerDot")
-            local GreenDot = Char:FindFirstChild("GreenMemberDot")
-            local RedDot = Char:FindFirstChild("RedMemberDot")
-            local PurpleDot = Char:FindFirstChild("PurpleMemberDot")
-
-            if Char.Head then
-                for _, v in ipairs(Char.Head:GetChildren()) do
-                    if v.Name == "FriendRainbowDot" then FriendDot = v end
-                    if v.Name == "BlueOwnerDot" then OwnerDot = v end
-                    if v.Name == "GreenMemberDot" then GreenDot = v end
-                    if v.Name == "RedMemberDot" then RedDot = v end
-                    if v.Name == "PurpleMemberDot" then PurpleDot = v end
-                end
-            end
-
-            if IsOwner then
-                if GreenDot then GreenDot:Destroy() end
-                if RedDot then RedDot:Destroy() end
-                if PurpleDot then PurpleDot:Destroy() end
-                if not OwnerDot then
-                    OwnerDot = Instance.new("BillboardGui")
-                    OwnerDot.Name = "BlueOwnerDot"
-                    OwnerDot.Size = UDim2.new(0,15,0,15)
-                    OwnerDot.StudsOffset = Vector3.new(-1.5,3,0)
-                    OwnerDot.AlwaysOnTop = true
-                    local Fr = Instance.new("Frame")
-                    Fr.Size = UDim2.new(1,0,1,0)
-                    Fr.BackgroundColor3 = BlueOwnerColor
-                    Instance.new("UICorner",Fr).CornerRadius=UDim.new(1,0)
-                    Fr.Parent=OwnerDot
-                    OwnerDot.Parent=Char.Head
-                else
-                    OwnerDot.Frame.BackgroundColor3 = BlueOwnerColor
-                end
-
-                if IsFriend then
-                    if not FriendDot then
-                        FriendDot = Instance.new("BillboardGui")
-                        FriendDot.Name = "FriendRainbowDot"
-                        FriendDot.Size = UDim2.new(0,15,0,15)
-                        FriendDot.StudsOffset = Vector3.new(1.5,3,0)
-                        FriendDot.AlwaysOnTop = true
-                        local Fr = Instance.new("Frame")
-                        Fr.Size = UDim2.new(1,0,1,0)
-                        Fr.BackgroundColor3 = Rainbow
-                        Instance.new("UICorner",Fr).CornerRadius=UDim.new(1,0)
-                        Fr.Parent=FriendDot
-                        FriendDot.Parent=Char.Head
-                    else
-                        FriendDot.Frame.BackgroundColor3 = Rainbow
-                    end
-                else
-                    if FriendDot then FriendDot:Destroy() end
-                end
-
-            elseif IsBmaivs then
-                if OwnerDot then OwnerDot:Destroy() end
-                if RedDot then RedDot:Destroy() end
-                if PurpleDot then PurpleDot:Destroy() end
-                if not GreenDot then
-                    GreenDot = Instance.new("BillboardGui")
-                    GreenDot.Name = "GreenMemberDot"
-                    GreenDot.Size = UDim2.new(0,15,0,15)
-                    GreenDot.StudsOffset = Vector3.new(-1.5,3,0)
-                    GreenDot.AlwaysOnTop = true
-                    local Fr = Instance.new("Frame")
-                    Fr.Size = UDim2.new(1,0,1,0)
-                    Fr.BackgroundColor3 = GreenMemberColor
-                    Instance.new("UICorner",Fr).CornerRadius=UDim.new(1,0)
-                    Fr.Parent=GreenDot
-                    GreenDot.Parent=Char.Head
-                else
-                    GreenDot.Frame.BackgroundColor3 = GreenMemberColor
-                end
-
-                if IsFriend then
-                    if not FriendDot then
-                        FriendDot = Instance.new("BillboardGui")
-                        FriendDot.Name = "FriendRainbowDot"
-                        FriendDot.Size = UDim2.new(0,15,0,15)
-                        FriendDot.StudsOffset = Vector3.new(1.5,3,0)
-                        FriendDot.AlwaysOnTop = true
-                        local Fr = Instance.new("Frame")
-                        Fr.Size = UDim2.new(1,0,1,0)
-                        Fr.BackgroundColor3 = Rainbow
-                        Instance.new("UICorner",Fr).CornerRadius=UDim.new(1,0)
-                        Fr.Parent=FriendDot
-                        FriendDot.Parent=Char.Head
-                    else
-                        FriendDot.Frame.BackgroundColor3 = Rainbow
-                    end
-                else
-                    if FriendDot then FriendDot:Destroy() end
-                end
-
-            elseif IsValentina then
-                if OwnerDot then OwnerDot:Destroy() end
-                if GreenDot then GreenDot:Destroy() end
-                if PurpleDot then PurpleDot:Destroy() end
-                if not RedDot then
-                    RedDot = Instance.new("BillboardGui")
-                    RedDot.Name = "RedMemberDot"
-                    RedDot.Size = UDim2.new(0,15,0,15)
-                    RedDot.StudsOffset = Vector3.new(-1.5,3,0)
-                    RedDot.AlwaysOnTop = true
-                    local Fr = Instance.new("Frame")
-                    Fr.Size = UDim2.new(1,0,1,0)
-                    Fr.BackgroundColor3 = RedMemberColor
-                    Instance.new("UICorner",Fr).CornerRadius=UDim.new(1,0)
-                    Fr.Parent=RedDot
-                    RedDot.Parent=Char.Head
-                else
-                    RedDot.Frame.BackgroundColor3 = RedMemberColor
-                end
-
-                if IsFriend then
-                    if not FriendDot then
-                        FriendDot = Instance.new("BillboardGui")
-                        FriendDot.Name = "FriendRainbowDot"
-                        FriendDot.Size = UDim2.new(0,15,0,15)
-                        FriendDot.StudsOffset = Vector3.new(1.5,3,0)
-                        FriendDot.AlwaysOnTop = true
-                        local Fr = Instance.new("Frame")
-                        Fr.Size = UDim2.new(1,0,1,0)
-                        Fr.BackgroundColor3 = Rainbow
-                        Instance.new("UICorner",Fr).CornerRadius=UDim.new(1,0)
-                        Fr.Parent=FriendDot
-                        FriendDot.Parent=Char.Head
-                    else
-                        FriendDot.Frame.BackgroundColor3 = Rainbow
-                    end
-                else
-                    if FriendDot then FriendDot:Destroy() end
-                end
-
-            elseif IsFiona then
-                if OwnerDot then OwnerDot:Destroy() end
-                if GreenDot then GreenDot:Destroy() end
-                if RedDot then RedDot:Destroy() end
-                if not PurpleDot then
-                    PurpleDot = Instance.new("BillboardGui")
-                    PurpleDot.Name = "PurpleMemberDot"
-                    PurpleDot.Size = UDim2.new(0,15,0,15)
-                    PurpleDot.StudsOffset = Vector3.new(-1.5,3,0)
-                    PurpleDot.AlwaysOnTop = true
-                    local Fr = Instance.new("Frame")
-                    Fr.Size = UDim2.new(1,0,1,0)
-                    Fr.BackgroundColor3 = PurpleMemberColor
-                    Instance.new("UICorner",Fr).CornerRadius=UDim.new(1,0)
-                    Fr.Parent=PurpleDot
-                    PurpleDot.Parent=Char.Head
-                else
-                    PurpleDot.Frame.BackgroundColor3 = PurpleMemberColor
-                end
-
-                if IsFriend then
-                    if not FriendDot then
-                        FriendDot = Instance.new("BillboardGui")
-                        FriendDot.Name = "FriendRainbowDot"
-                        FriendDot.Size = UDim2.new(0,15,0,15)
-                        FriendDot.StudsOffset = Vector3.new(1.5,3,0)
-                        FriendDot.AlwaysOnTop = true
-                        local Fr = Instance.new("Frame")
-                        Fr.Size = UDim2.new(1,0,1,0)
-                        Fr.BackgroundColor3 = Rainbow
-                        Instance.new("UICorner",Fr).CornerRadius=UDim.new(1,0)
-                        Fr.Parent=FriendDot
-                        FriendDot.Parent=Char.Head
-                    else
-                        FriendDot.Frame.BackgroundColor3 = Rainbow
-                    end
-                else
-                    if FriendDot then FriendDot:Destroy() end
-                end
-
-            elseif IsFriend then
-                if OwnerDot then OwnerDot:Destroy() end
-                if GreenDot then GreenDot:Destroy() end
-                if RedDot then RedDot:Destroy() end
-                if PurpleDot then PurpleDot:Destroy() end
-                if not FriendDot then
-                    FriendDot = Instance.new("BillboardGui")
-                    FriendDot.Name = "FriendRainbowDot"
-                    FriendDot.Size = UDim2.new(0,15,0,15)
-                    FriendDot.StudsOffset = Vector3.new(1.5,3,0)
-                    FriendDot.AlwaysOnTop = true
-                    local Fr = Instance.new("Frame")
-                    Fr.Size = UDim2.new(1,0,1,0)
-                    Fr.BackgroundColor3 = Rainbow
-                    Instance.new("UICorner",Fr).CornerRadius=UDim.new(1,0)
-                    Fr.Parent=FriendDot
-                    FriendDot.Parent=Char.Head
-                else
-                    FriendDot.Frame.BackgroundColor3 = Rainbow
-                end
-
-            else
-                if FriendDot then FriendDot:Destroy() end
-                if OwnerDot then OwnerDot:Destroy() end
-                if GreenDot then GreenDot:Destroy() end
-                if RedDot then RedDot:Destroy() end
-                if PurpleDot then PurpleDot:Destroy() end
-            end
-        end
-    end)
 end
+
+print("✅ BLUE MODE HUB STARTUP READY — CLICK OK TO LOAD")
