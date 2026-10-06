@@ -228,4 +228,3 @@ RunService.Heartbeat:Connect(function(dt)
     Border.Color = Col
     BtnGlow.Color = Col
 end)
-
