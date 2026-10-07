@@ -1,17 +1,38 @@
--- 🔵 BLUE MODE HUB | Random Math Key System — FIXED & WORKING
+-- ==============================================
+-- 🔵 BLUE MODE HUB | Math Key System + SOUNDS
+-- ==============================================
 task.wait(0.1)
 
--- Prevent duplicate loading
+-- ✅ GETGENV — PREVENT DUPLICATE
 if getgenv().BlueModeKeySys_Loaded then return end
 getgenv().BlueModeKeySys_Loaded = true
 
+-- ===== SERVICES =====
 local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
 local RunService = game:GetService("RunService")
+local SoundService = game:GetService("SoundService")
 
-local ActivePopups = {}
+-- ==============================================
+-- 🔊 SOUND SYSTEM — CLICK / SUCCESS / ERROR
+-- ==============================================
+local function MakeSound(id, vol, pit)
+    local s = Instance.new("Sound")
+    s.SoundId = "rbxassetid://"..id
+    s.Volume = vol
+    s.Pitch = pit
+    s.Looped = false
+    s.Parent = SoundService
+    return s
+end
 
--- ✅ Generate random math question
+local ClickSnd = MakeSound("145319201", 0.8, 1.2)
+local GoodSnd = MakeSound("156551891", 0.9, 1.0)
+local BadSnd  = MakeSound("145319131", 0.7, 0.9)
+
+local function Play(s) s:Stop(); s:Play() end
+
+-- ===== MATH QUESTION GENERATOR =====
 local function GenerateMathQuestion()
     local ops = {
         {sym = "+", calc = function(a,b) return a+b end},
@@ -43,17 +64,15 @@ end
 
 local QuestionText, CorrectAnswer = GenerateMathQuestion()
 
--- ✅ Create GUI container
+-- ===== GUI CONTAINER =====
 local GuiContainer = Instance.new("Folder")
 GuiContainer.Name = "BlueModeKeySys"
 GuiContainer.Parent = CoreGui
 
--- ✅ Main Key UI — GUARANTEED VISIBLE
 local KeyUI = Instance.new("ScreenGui")
 KeyUI.Name = "BlueModeKeySystem"
 KeyUI.ResetOnSpawn = false
-KeyUI.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-KeyUI.DisplayOrder = 999 -- On top of everything
+KeyUI.DisplayOrder = 999
 KeyUI.Parent = GuiContainer
 
 local MainFrame = Instance.new("Frame")
@@ -63,7 +82,6 @@ MainFrame.BackgroundColor3 = Color3.fromRGB(10, 15, 30)
 MainFrame.BorderSizePixel = 2
 MainFrame.BorderColor3 = Color3.fromRGB(0, 180, 255)
 MainFrame.Active = true
-MainFrame.Visible = true
 MainFrame.Parent = KeyUI
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 20)
 
@@ -125,7 +143,7 @@ BtnGlow.Thickness = 3
 BtnGlow.Color = Color3.fromRGB(0, 150, 255)
 BtnGlow.Parent = ConfirmBtn
 
--- Mean messages
+-- ===== POPUP MESSAGES =====
 local MeanTexts = {
     "Math is too hard for you?!",
     "Wow, TERRIBLE at math!",
@@ -136,8 +154,8 @@ local MeanTexts = {
     "Math skills = 0",
     "Did you skip math class?"
 }
+local ActivePopups = {}
 
--- Clear all popups
 local function ClearAllPopups()
     for _, Pop in ipairs(ActivePopups) do
         if Pop then pcall(function() Pop:Destroy() end) end
@@ -145,7 +163,6 @@ local function ClearAllPopups()
     table.clear(ActivePopups)
 end
 
--- Spam popups — stays fully on screen
 local function SpamPopups()
     local MaxPops = 8
     local w, h = 260, 140
@@ -196,6 +213,7 @@ local function SpamPopups()
         PopText.Parent = PopFrame
 
         CloseX.MouseButton1Click:Connect(function()
+            Play(ClickSnd)
             pcall(function() PopUI:Destroy() end)
         end)
     end
@@ -206,21 +224,25 @@ local function SpamPopups()
     end
 end
 
--- ✅ Confirm Button Logic
+-- ===== CONFIRM BUTTON =====
 ConfirmBtn.MouseButton1Click:Connect(function()
+    Play(ClickSnd) -- 🔊 CLICK SOUND
+    
     local Ans = AnswerBox.Text
     if Ans == CorrectAnswer then
+        Play(GoodSnd) -- ✅ SUCCESS
         ClearAllPopups()
         KeyUI:Destroy()
-        task.wait(0.1)
-        -- ✅ Load your hub
+        task.wait(0.2)
+        -- ✅ LOAD YOUR HUB
         loadstring(game:HttpGet("https://pastebin.com/raw/mKAfjfEu", true))()
     else
+        Play(BadSnd) -- ❌ ERROR
         SpamPopups()
     end
 end)
 
--- Rainbow glow animation
+-- ===== RAINBOW GLOW =====
 local Hue = 0
 RunService.Heartbeat:Connect(function(dt)
     Hue = (Hue + dt * 0.35) % 1
