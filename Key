@@ -1,12 +1,17 @@
 -- ==============================================
--- 🔵 BLUE MODE HUB — KEY SYSTEM WITH CLOSE BUTTON
--- ✅ RANDOM MATH QUESTION EVERY TIME
--- ✅ ✕ CLOSE BUTTON — DELETES EVERYTHING / STOPS SCRIPT
--- ✅ LOADS HUB ON CORRECT ANSWER
+-- 🔵 BLUE MODE HUB — SUPABASE KEY SYSTEM
+-- VERSION 2.0
 -- ==============================================
+
 task.wait(0.1)
 
--- ✅ GETGENV — PREVENT DUPLICATE
+-- ===== SUPABASE CONFIGURATION =====
+local LOADER_URL =
+"https://qttqjwvwunhzimpfyzsv.supabase.co/functions/v1/smooth-service"
+
+local SUPABASE_ANON_KEY = "PASTE_YOUR_LEGACY_ANON_KEY_HERE"
+
+-- ===== PREVENT DUPLICATES =====
 if getgenv().BlueModeKeySys_Loaded then return end
 getgenv().BlueModeKeySys_Loaded = true
 
@@ -14,6 +19,9 @@ getgenv().BlueModeKeySys_Loaded = true
 local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
 local RunService = game:GetService("RunService")
+local HttpService = game:GetService("HttpService")
+
+local Connections = {}
 
 -- ===== MATH QUESTION GENERATOR =====
 local function GenerateMathQuestion()
@@ -23,6 +31,7 @@ local function GenerateMathQuestion()
         {sym = "×", calc = function(a,b) return a*b end},
         {sym = "÷", calc = function(a,b) return a/b end}
     }
+
     local op = ops[math.random(#ops)]
     local a, b, ans
 
@@ -30,10 +39,12 @@ local function GenerateMathQuestion()
         a = math.random(-10, 10)
         b = math.random(-10, 10)
         ans = op.calc(a, b)
+
     elseif op.sym == "×" then
         a = math.random(-5, 5)
         b = math.random(-5, 5)
         ans = op.calc(a, b)
+
     else
         b = math.random(-5, 5)
         if b == 0 then b = 2 end
@@ -42,6 +53,7 @@ local function GenerateMathQuestion()
     end
 
     ans = tonumber(string.format("%.0f", ans))
+
     return a .. " " .. op.sym .. " " .. b .. " = ?", tostring(ans)
 end
 
@@ -58,16 +70,23 @@ KeyUI.ResetOnSpawn = false
 KeyUI.DisplayOrder = 999
 KeyUI.Parent = GuiContainer
 
--- ===== 🗑️ FULL CLEANUP FUNCTION =====
+-- ===== CLEANUP =====
 local function CloseAndDeleteEverything()
-    -- Destroy the key UI
-    pcall(function() KeyUI:Destroy() end)
-    -- Destroy container
-    pcall(function() GuiContainer:Destroy() end)
-    -- Clear the genv flag so it can run again later
+    for _, connection in ipairs(Connections) do
+        pcall(function()
+            connection:Disconnect()
+        end)
+    end
+
+    pcall(function()
+        KeyUI:Destroy()
+    end)
+
+    pcall(function()
+        GuiContainer:Destroy()
+    end)
+
     getgenv().BlueModeKeySys_Loaded = nil
-    -- Stop any running scripts
-    return
 end
 
 -- ===== MAIN FRAME =====
@@ -79,6 +98,7 @@ MainFrame.BorderSizePixel = 2
 MainFrame.BorderColor3 = Color3.fromRGB(0, 180, 255)
 MainFrame.Active = true
 MainFrame.Parent = KeyUI
+
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 20)
 
 local Border = Instance.new("UIStroke")
@@ -87,7 +107,7 @@ Border.Color = Color3.fromRGB(0, 80, 255)
 Border.LineJoinMode = Enum.LineJoinMode.Round
 Border.Parent = MainFrame
 
--- ===== ✕ CLOSE BUTTON =====
+-- ===== CLOSE BUTTON =====
 local CloseBtn = Instance.new("TextButton")
 CloseBtn.Name = "CloseButton"
 CloseBtn.Size = UDim2.new(0, 40, 0, 40)
@@ -99,13 +119,14 @@ CloseBtn.Text = "✕"
 CloseBtn.TextColor3 = Color3.new(1, 1, 1)
 CloseBtn.AutoLocalize = false
 CloseBtn.Parent = MainFrame
+
 Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 10)
 
--- Close button click — DELETE EVERYTHING
 CloseBtn.MouseButton1Click:Connect(function()
     CloseAndDeleteEverything()
 end)
 
+-- ===== TITLE =====
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, -90, 0, 55)
 Title.Position = UDim2.new(0, 20, 0, 10)
@@ -116,6 +137,7 @@ Title.Text = "🔵 BLUE MODE HUB — KEY"
 Title.TextColor3 = Color3.fromRGB(0, 200, 255)
 Title.Parent = MainFrame
 
+-- ===== QUESTION =====
 local Question = Instance.new("TextLabel")
 Question.Size = UDim2.new(1, -40, 0, 50)
 Question.Position = UDim2.new(0, 20, 0, 70)
@@ -126,6 +148,7 @@ Question.Text = QuestionText
 Question.TextColor3 = Color3.fromRGB(255, 255, 255)
 Question.Parent = MainFrame
 
+-- ===== ANSWER BOX =====
 local AnswerBox = Instance.new("TextBox")
 AnswerBox.Size = UDim2.new(1, -40, 0, 60)
 AnswerBox.Position = UDim2.new(0, 20, 0, 130)
@@ -136,12 +159,15 @@ AnswerBox.Text = ""
 AnswerBox.PlaceholderText = "👉 Type answer here..."
 AnswerBox.TextColor3 = Color3.new(1, 1, 1)
 AnswerBox.Parent = MainFrame
+
 Instance.new("UICorner", AnswerBox).CornerRadius = UDim.new(0, 12)
+
 local BoxGlow = Instance.new("UIStroke")
 BoxGlow.Thickness = 2
 BoxGlow.Color = Color3.fromRGB(0, 180, 255)
 BoxGlow.Parent = AnswerBox
 
+-- ===== CONFIRM BUTTON =====
 local ConfirmBtn = Instance.new("TextButton")
 ConfirmBtn.Size = UDim2.new(1, -40, 0, 55)
 ConfirmBtn.Position = UDim2.new(0, 20, 0, 200)
@@ -152,25 +178,115 @@ ConfirmBtn.Text = "✓ CONFIRM & UNLOCK"
 ConfirmBtn.TextColor3 = Color3.new(1, 1, 1)
 ConfirmBtn.AutoLocalize = false
 ConfirmBtn.Parent = MainFrame
+
 Instance.new("UICorner", ConfirmBtn).CornerRadius = UDim.new(0, 12)
+
 local BtnGlow = Instance.new("UIStroke")
 BtnGlow.Thickness = 3
 BtnGlow.Color = Color3.fromRGB(0, 150, 255)
 BtnGlow.Parent = ConfirmBtn
 
+-- ===== SUPABASE REQUEST =====
+local function LoadBlueMode()
+    Question.Text = "⏳ CONNECTING TO SERVER..."
+    Question.TextColor3 = Color3.fromRGB(0, 200, 255)
+    ConfirmBtn.Text = "PLEASE WAIT..."
+    ConfirmBtn.Active = false
+
+    task.spawn(function()
+        local success, result = pcall(function()
+
+            local requestFunction =
+                request or http_request or
+                (syn and syn.request)
+
+            if not requestFunction then
+                error("HTTP request function unavailable.")
+            end
+
+            local response = requestFunction({
+                Url = LOADER_URL,
+                Method = "POST",
+                Headers = {
+                    ["Content-Type"] = "application/json",
+                    ["apikey"] = SUPABASE_ANON_KEY,
+                    ["Authorization"] = "Bearer " .. SUPABASE_ANON_KEY
+                },
+                Body = "{}"
+            })
+
+            if not response then
+                error("No server response.")
+            end
+
+            local status = response.StatusCode or response.Status
+
+            if status ~= 200 then
+                error("Server returned HTTP " .. tostring(status))
+            end
+
+            local data = HttpService:JSONDecode(response.Body)
+
+            if data.success ~= true then
+                error(data.error or "Server authorization failed.")
+            end
+
+            if type(data.script) ~= "string" or data.script == "" then
+                error("Main script is missing.")
+            end
+
+            return data.script
+        end)
+
+        if not success then
+            if KeyUI.Parent then
+                Question.Text = "❌ CONNECTION FAILED"
+                Question.TextColor3 = Color3.fromRGB(255, 80, 80)
+                ConfirmBtn.Text = "✓ RETRY"
+                ConfirmBtn.Active = true
+            end
+
+            warn("[BLUE MODE LOADER] " .. tostring(result))
+            return
+        end
+
+        if not KeyUI.Parent then return end
+
+        CloseAndDeleteEverything()
+
+        task.wait(0.1)
+
+        local compiled, loadError = loadstring(result)
+
+        if not compiled then
+            warn("[BLUE MODE HUB] Compilation failed: " .. tostring(loadError))
+            return
+        end
+
+        local executed, executionError = pcall(compiled)
+
+        if not executed then
+            warn("[BLUE MODE HUB] Execution failed: " .. tostring(executionError))
+        end
+    end)
+end
+
 -- ===== CONFIRM BUTTON =====
 ConfirmBtn.MouseButton1Click:Connect(function()
-    local Ans = AnswerBox.Text
-    if Ans == CorrectAnswer then
-        -- ✅ CORRECT — CLOSE KEY SYSTEM AND LOAD HUB
-        CloseAndDeleteEverything()
-        task.wait(0.1)
-        loadstring(game:HttpGet("https://pastebin.com/raw/mKAfjfEu", true))()
+    if not ConfirmBtn.Active then return end
+
+    local answer = AnswerBox.Text:gsub("%s+", "")
+
+    if answer == CorrectAnswer then
+        LoadBlueMode()
     else
-        -- ❌ WRONG — SHOW MESSAGE
         Question.Text = "❌ WRONG — TRY AGAIN"
         Question.TextColor3 = Color3.fromRGB(255, 80, 80)
+
         task.wait(1.5)
+
+        if not KeyUI.Parent then return end
+
         Question.Text = QuestionText
         Question.TextColor3 = Color3.fromRGB(255, 255, 255)
         AnswerBox.Text = ""
@@ -179,9 +295,12 @@ end)
 
 -- ===== RAINBOW GLOW =====
 local Hue = 0
-RunService.Heartbeat:Connect(function(dt)
+
+Connections[#Connections + 1] = RunService.Heartbeat:Connect(function(dt)
     Hue = (Hue + dt * 0.35) % 1
+
     local Col = Color3.fromHSV(Hue, 1, 1)
+
     Border.Color = Col
     BtnGlow.Color = Col
 end)
