@@ -1,6 +1,6 @@
--- ==============================================
+her-- ==============================================
 -- 🔵 BLUE MODE HUB — SUPABASE KEY SYSTEM
--- VERSION 2.0
+-- VERSION 2.2
 -- ==============================================
 
 task.wait(0.1)
@@ -9,14 +9,14 @@ task.wait(0.1)
 local LOADER_URL =
 "https://qttqjwvwunhzimpfyzsv.supabase.co/functions/v1/smooth-service"
 
-local SUPABASE_ANON_KEY = "PASTE_YOUR_LEGACY_ANON_KEY_HERE"
+local LOADER_PUBLISHABLE_KEY =
+"sb_publishable_WHxw0xoB11ziYGlEdGkdJw_-jPiTj6o"
 
 -- ===== PREVENT DUPLICATES =====
 if getgenv().BlueModeKeySys_Loaded then return end
 getgenv().BlueModeKeySys_Loaded = true
 
 -- ===== SERVICES =====
-local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
 local RunService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
@@ -188,12 +188,15 @@ BtnGlow.Parent = ConfirmBtn
 
 -- ===== SUPABASE REQUEST =====
 local function LoadBlueMode()
+
     Question.Text = "⏳ CONNECTING TO SERVER..."
     Question.TextColor3 = Color3.fromRGB(0, 200, 255)
+
     ConfirmBtn.Text = "PLEASE WAIT..."
     ConfirmBtn.Active = false
 
     task.spawn(function()
+
         local success, result = pcall(function()
 
             local requestFunction =
@@ -207,11 +210,12 @@ local function LoadBlueMode()
             local response = requestFunction({
                 Url = LOADER_URL,
                 Method = "POST",
+
                 Headers = {
                     ["Content-Type"] = "application/json",
-                    ["apikey"] = SUPABASE_ANON_KEY,
-                    ["Authorization"] = "Bearer " .. SUPABASE_ANON_KEY
+                    ["apikey"] = LOADER_PUBLISHABLE_KEY
                 },
+
                 Body = "{}"
             })
 
@@ -219,7 +223,8 @@ local function LoadBlueMode()
                 error("No server response.")
             end
 
-            local status = response.StatusCode or response.Status
+            local status =
+                response.StatusCode or response.Status
 
             if status ~= 200 then
                 error("Server returned HTTP " .. tostring(status))
@@ -231,17 +236,22 @@ local function LoadBlueMode()
                 error(data.error or "Server authorization failed.")
             end
 
-            if type(data.script) ~= "string" or data.script == "" then
+            if type(data.script) ~= "string"
+                or data.script == "" then
                 error("Main script is missing.")
             end
 
             return data.script
+
         end)
 
         if not success then
+
             if KeyUI.Parent then
                 Question.Text = "❌ CONNECTION FAILED"
-                Question.TextColor3 = Color3.fromRGB(255, 80, 80)
+                Question.TextColor3 =
+                    Color3.fromRGB(255, 80, 80)
+
                 ConfirmBtn.Text = "✓ RETRY"
                 ConfirmBtn.Active = true
             end
@@ -250,7 +260,9 @@ local function LoadBlueMode()
             return
         end
 
-        if not KeyUI.Parent then return end
+        if not KeyUI.Parent then
+            return
+        end
 
         CloseAndDeleteEverything()
 
@@ -259,21 +271,31 @@ local function LoadBlueMode()
         local compiled, loadError = loadstring(result)
 
         if not compiled then
-            warn("[BLUE MODE HUB] Compilation failed: " .. tostring(loadError))
+            warn(
+                "[BLUE MODE HUB] Compilation failed: "
+                .. tostring(loadError)
+            )
             return
         end
 
         local executed, executionError = pcall(compiled)
 
         if not executed then
-            warn("[BLUE MODE HUB] Execution failed: " .. tostring(executionError))
+            warn(
+                "[BLUE MODE HUB] Execution failed: "
+                .. tostring(executionError)
+            )
         end
+
     end)
 end
 
 -- ===== CONFIRM BUTTON =====
 ConfirmBtn.MouseButton1Click:Connect(function()
-    if not ConfirmBtn.Active then return end
+
+    if not ConfirmBtn.Active then
+        return
+    end
 
     local answer = AnswerBox.Text:gsub("%s+", "")
 
@@ -281,14 +303,19 @@ ConfirmBtn.MouseButton1Click:Connect(function()
         LoadBlueMode()
     else
         Question.Text = "❌ WRONG — TRY AGAIN"
-        Question.TextColor3 = Color3.fromRGB(255, 80, 80)
+        Question.TextColor3 =
+            Color3.fromRGB(255, 80, 80)
 
         task.wait(1.5)
 
-        if not KeyUI.Parent then return end
+        if not KeyUI.Parent then
+            return
+        end
 
         Question.Text = QuestionText
-        Question.TextColor3 = Color3.fromRGB(255, 255, 255)
+        Question.TextColor3 =
+            Color3.fromRGB(255, 255, 255)
+
         AnswerBox.Text = ""
     end
 end)
@@ -296,11 +323,14 @@ end)
 -- ===== RAINBOW GLOW =====
 local Hue = 0
 
-Connections[#Connections + 1] = RunService.Heartbeat:Connect(function(dt)
-    Hue = (Hue + dt * 0.35) % 1
+Connections[#Connections + 1] =
+    RunService.Heartbeat:Connect(function(dt)
 
-    local Col = Color3.fromHSV(Hue, 1, 1)
+        Hue = (Hue + dt * 0.35) % 1
 
-    Border.Color = Col
-    BtnGlow.Color = Col
-end)
+        local Col = Color3.fromHSV(Hue, 1, 1)
+
+        Border.Color = Col
+        BtnGlow.Color = Col
+
+    end)
